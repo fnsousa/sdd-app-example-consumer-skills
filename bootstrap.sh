@@ -32,6 +32,8 @@ git clone \
 
 mkdir -p "$SKILLS_DIR"
 
+EXPECTED_SKILLS=$(mktemp)
+
 grep '^[[:space:]]*-' "$SKILLS_FILE" | while read -r line
 do
     skill=$(echo "$line" | sed 's/^[[:space:]]*-[[:space:]]*//')
@@ -57,8 +59,25 @@ do
 
     cp "$SOURCE" "$TARGET_FILE"
 
+    echo "$TARGET_DIR" >> "$EXPECTED_SKILLS"
+
     echo "✓ ${NAME}@${VERSION}"
 done
+
+echo ""
+echo "Removendo skills não utilizadas..."
+
+find "$SKILLS_DIR" -type f -name "skill.md" | while read -r skill_file
+do
+    skill_dir=$(dirname "$skill_file")
+
+    if ! grep -Fxq "$skill_dir" "$EXPECTED_SKILLS"; then
+        echo "🗑 Removendo $(realpath --relative-to="$SKILLS_DIR" "$skill_dir" 2>/dev/null || echo "$skill_dir")"
+        rm -rf "$skill_dir"
+    fi
+done
+
+rm -f "$EXPECTED_SKILLS"
 
 echo ""
 echo "Bootstrap concluído."
