@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 CATALOG_REPO="git@github.com:fnsousa/sdd-central-skills.git"
 BRANCH="main"
@@ -14,33 +14,51 @@ if [ ! -f "$SKILLS_FILE" ]; then
     exit 1
 fi
 
+TEMP_DIR=$(mktemp -d)
+
+cleanup() {
+    rm -rf "$TEMP_DIR"
+}
+
+trap cleanup EXIT
+
+echo "Baixando catálogo..."
+
+git clone \
+    --depth 1 \
+    --branch "$BRANCH" \
+    "$CATALOG_REPO" \
+    "$TEMP_DIR"
+
 mkdir -p "$SKILLS_DIR"
 
-cd "$SKILLS_DIR"
-
-if [ ! -d ".git" ]; then
-    git init
-    git remote add origin "$CATALOG_REPO"
-fi
-
-git sparse-checkout init --cone
-
-SPARSE_PATHS=""
-
-while IFS= read -r skill
+grep '^[[:space:]]*-' "$SKILLS_FILE" | while read -r line
 do
-    skill=$(echo "$skill" | xargs)
+    skill=$(echo "$line" | sed 's/^[[:space:]]*-[[:space:]]*//')
 
-    if [ -n "$skill" ]; then
-        SPARSE_PATHS="${SPARSE_PATHS} skills/${skill}"
+    NAME=$(echo "$skill" | cut -d'@' -f1)
+    VERSION=$(echo "$skill" | cut -d'@' -f2)
+
+    SOURCE="${TEMP_DIR}/${NAME}/${VERSION}.md"
+
+    echo "Processando ${NAME}@${VERSION}..."
+
+    if [ ! -f "$SOURCE" ]; then
+        echo ""
+        echo "Skill não encontrada:"
+        echo "  ${NAME}@${VERSION}"
+        exit 1
     fi
 
-done < <(grep '^  - ' "../../${SKILLS_FILE}")
+    TARGET_DIR="${SKILLS_DIR}/${NAME}"
+    TARGET_FILE="${TARGET_DIR}/skill.md"
 
-git sparse-checkout set $SPARSE_PATHS
+    mkdir -p "$TARGET_DIR"
 
-git pull origin "$BRANCH"
+    cp "$SOURCE" "$TARGET_FILE"
+
+    echo "✓ ${NAME}@${VERSION}"
+done
 
 echo ""
-echo "Skills carregadas:"
-echo "$SPARSE_PATHS"
+echo "Bootstrap concluído."

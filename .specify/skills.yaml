@@ -1,3 +1,7 @@
+catalog:
+  repository: git@github.com:fnsousa/sdd-central-skills.git
+  branch: main
+
 skills:
-  - architecture
-  - java-21
+  - architecture/hexagonal@1.0.0
+  - java-21@1.0.0
