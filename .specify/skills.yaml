@@ -4,4 +4,4 @@ catalog:
 
 skills:
   - architecture/hexagonal@1.0.0
-  - java-21@1.0.0
+  - java-21@2.0.0
